@@ -9,12 +9,13 @@ import requests
 import random
 import json
 
-WEATHER_API_KEY = "7fc0051d417e1381a3e32c8c6e75a225"
+# Enter your own OpenWeather API key
+WEATHER_API_KEY = "ENTER_YOUR_OPENWEATHER_API_KEY"
 
 
 def get_weather(city="Karachi"):
-    city = city.strip().title()  # clean the input
-    url = f"https://api.openweathermap.org/data/2.5/waeather?q={city}&appid={WEATHER_API_KEY}&units=metric"
+    city = city.strip().title()
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&units=metric"
 
     data = requests.get(url).json()
     print("DEBUG WEATHER DATA:", data)
@@ -29,13 +30,15 @@ def get_weather(city="Karachi"):
     return f"Weather in {city}: {desc}, {temp}°C, feels like {feels}°C."
 
 
-API_KEY = "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"
+#  Enter your own OpenRouter API key
+API_KEY = "ENTER_YOUR_OPENROUTER_API_KEY"
 
-chat_history = ""   # to store conversation
+chat_history = ""
 
 
-import requests
-GNEWS_API_KEY = "272e3c8cf2d249a91013a52d33de7cda"
+# Enter your own GNews API key
+GNEWS_API_KEY = "ENTER_YOUR_GNEWS_API_KEY"
+
 
 def get_latest_news():
     url = f"https://gnews.io/api/v4/top-headlines?category=technology&lang=en&country=us&max=5&apikey={GNEWS_API_KEY}"
@@ -57,10 +60,7 @@ def get_latest_news():
 
 
 
-
-
 def clean_title(text):
-    """Make a clean file title from user prompt."""
     title = " ".join(text.split()[:6])
     title = "".join(c for c in title if c.isalnum() or c in (" ", "_"))
     return title.replace(" ", "_")
@@ -69,7 +69,7 @@ def clean_title(text):
 def chat(user_msg):
     global chat_history
 
-    chat_history += f"User: {user_msg}\nSUR: "     # changed Assistant → SUR
+    chat_history += f"User: {user_msg}\nSUR: "
 
     try:
         response = requests.post(
@@ -81,7 +81,7 @@ def chat(user_msg):
             json={
                 "model": "meta-llama/llama-3.1-8b-instruct",
                 "messages": [
-                    {"role": "system", "content": "You are SUR, a helpful AI assistant."},   # changed system name
+                    {"role": "system", "content": "You are SUR, a helpful AI assistant."},
                     {"role": "user", "content": user_msg}
                 ]
             },
@@ -128,7 +128,7 @@ def ai(prompt):
             json={
                 "model": "meta-llama/llama-3.1-8b-instruct",
                 "messages": [
-                    {"role": "system", "content": "You are SUR."},   # name changed
+                    {"role": "system", "content": "You are SUR."},
                     {"role": "user", "content": prompt}
                 ]
             },
@@ -152,7 +152,7 @@ def ai(prompt):
 
         with open(file_name, "w", encoding="utf-8") as f:
             f.write("USER PROMPT:\n" + prompt + "\n\n")
-            f.write("SUR RESPONSE:\n" + reply + "\n\n")      # changed AI RESPONSE → SUR RESPONSE
+            f.write("SUR RESPONSE:\n" + reply + "\n\n")
             f.write("RAW JSON:\n" + str(data))
 
         print("Saved at:", os.path.abspath(file_name))
@@ -205,7 +205,7 @@ while True:
 
     for site in sites:
         if f"open {site[0]}" in command:
-            say(f"Opening {site[0]} sur")
+            say(f"Opening {site[0]} sir")
             webbrowser.open(site[1])
 
     if "open music" in command:
@@ -232,15 +232,13 @@ while True:
         print(news)
         say(news)
 
-
     elif "tech news" in command or "technology news" in command:
         say("Fetching latest technology news sir")
         news = get_latest_news()
         print(news)
         say(news)
 
-
-    elif "sur quit for today " in command:
+    elif "sur quit for today" in command:
         exit()
 
     elif "weather update" in command:
@@ -250,7 +248,6 @@ while True:
         weather = get_weather(city)
         print(weather)
         say(weather)
-
 
     else:
         reply = chat(command)
