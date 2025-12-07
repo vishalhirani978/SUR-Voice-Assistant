@@ -1,0 +1,263 @@
+import datetime
+import speech_recognition as sr
+import os
+import pyttsx3
+import win32com.client as wincl
+import webbrowser
+import subprocess
+import requests
+import random
+import json
+
+WEATHER_API_KEY = "7fc0051d417e1381a3e32c8c6e75a225"
+
+
+def get_weather(city="Karachi"):
+    city = city.strip().title()  # clean the input
+    url = f"https://api.openweathermap.org/data/2.5/waeather?q={city}&appid={WEATHER_API_KEY}&units=metric"
+
+    data = requests.get(url).json()
+    print("DEBUG WEATHER DATA:", data)
+
+    if data.get("cod") != 200:
+        return f"Unable to fetch weather for {city}. Check the spelling."
+
+    temp = data["main"]["temp"]
+    feels = data["main"]["feels_like"]
+    desc = data["weather"][0]["description"].title()
+
+    return f"Weather in {city}: {desc}, {temp}°C, feels like {feels}°C."
+
+
+API_KEY = "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"
+
+chat_history = ""   # to store conversation
+
+
+import requests
+GNEWS_API_KEY = "272e3c8cf2d249a91013a52d33de7cda"
+
+def get_latest_news():
+    url = f"https://gnews.io/api/v4/top-headlines?category=technology&lang=en&country=us&max=5&apikey={GNEWS_API_KEY}"
+
+    r = requests.get(url).json()
+    print("DEBUG NEWS:", r)
+
+    if "articles" not in r:
+        return "No tech news available right now."
+
+    tech_news = []
+    for i, article in enumerate(r["articles"], start=1):
+        title = article["title"]
+        source = article["source"]["name"]
+        tech_news.append(f"{i}. {title} — {source}")
+
+    return "\n".join(tech_news)
+
+
+
+
+
+
+def clean_title(text):
+    """Make a clean file title from user prompt."""
+    title = " ".join(text.split()[:6])
+    title = "".join(c for c in title if c.isalnum() or c in (" ", "_"))
+    return title.replace(" ", "_")
+
+
+def chat(user_msg):
+    global chat_history
+
+    chat_history += f"User: {user_msg}\nSUR: "     # changed Assistant → SUR
+
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "meta-llama/llama-3.1-8b-instruct",
+                "messages": [
+                    {"role": "system", "content": "You are SUR, a helpful AI assistant."},   # changed system name
+                    {"role": "user", "content": user_msg}
+                ]
+            },
+            timeout=20
+        )
+
+        data = response.json()
+
+        if "error" in data:
+            return "API Error: " + data["error"]["message"]
+
+        assistant_reply = data["choices"][0]["message"]["content"]
+
+        chat_history += assistant_reply + "\n\n"
+
+        if not os.path.exists("OPENAI"):
+            os.mkdir("OPENAI")
+
+        title = clean_title(user_msg)
+        file_name = f"OPENAI/CHAT_{title}_{random.randint(1000,9999)}.txt"
+
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write("CHAT TITLE: " + title.replace("_", " ") + "\n")
+            f.write("=====================================\n\n")
+            f.write(chat_history)
+
+        return assistant_reply
+
+    except Exception as e:
+        return "Unexpected Error: " + str(e)
+
+
+
+def ai(prompt):
+    url = "https://openrouter.ai/api/v1/chat/completions"
+
+    try:
+        response = requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "meta-llama/llama-3.1-8b-instruct",
+                "messages": [
+                    {"role": "system", "content": "You are SUR."},   # name changed
+                    {"role": "user", "content": prompt}
+                ]
+            },
+            timeout=20
+        )
+
+        data = response.json()
+
+        if "error" in data:
+            return "API Error: " + data["error"].get("message", "Unknown error")
+
+        reply = data["choices"][0]["message"]["content"]
+
+        if not os.path.exists("OPENAI"):
+            os.mkdir("OPENAI")
+
+        heading = " ".join(prompt.split()[:6])
+        heading = heading.replace(" ", "_")
+
+        file_name = f"OPENAI/CHAT-{heading}-{random.randint(1000,9999)}.txt"
+
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write("USER PROMPT:\n" + prompt + "\n\n")
+            f.write("SUR RESPONSE:\n" + reply + "\n\n")      # changed AI RESPONSE → SUR RESPONSE
+            f.write("RAW JSON:\n" + str(data))
+
+        print("Saved at:", os.path.abspath(file_name))
+
+        return reply
+
+    except Exception as e:
+        return "Error: " + str(e)
+
+
+
+def say(text):
+    speak = wincl.Dispatch("SAPI.SpVoice")
+    speak.Speak(text)
+
+
+def takecommand():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Listening...")
+        r.pause_threshold = 1
+        audio = r.listen(source)
+
+    try:
+        print("Recognizing...")
+        query = r.recognize_google(audio, language='en-in')
+        print("User said:", query)
+    except:
+        print("Sorry, I could not understand.")
+        return ""
+
+    return query
+
+
+say("Hi sir, I am Sur")
+
+while True:
+    command = takecommand().lower()
+
+    if not command:
+        continue
+
+    say(command)
+
+    sites = [
+        ["youtube", "https://www.youtube.com"],
+        ["google", "https://www.google.com"],
+        ["chat gpt", "https://chatgpt.com/"]
+    ]
+
+    for site in sites:
+        if f"open {site[0]}" in command:
+            say(f"Opening {site[0]} sur")
+            webbrowser.open(site[1])
+
+    if "open music" in command:
+        music_path = r"C:/Users/Vishal/Videos/downloaded_video"
+        songs = os.listdir(music_path)
+
+        for song in songs:
+            if song.endswith((".mp3", ".wav", ".m4a")):
+                os.startfile(os.path.join(music_path, song))
+                say("Playing music sir")
+                break
+
+    elif "tell me time" in command:
+        strTime = datetime.datetime.now().strftime("%H:%M:%S")
+        say(f"Current time is {strTime} sir")
+
+    elif "open camera" in command:
+        say("Opening Windows Camera sir")
+        subprocess.Popen("start microsoft.windows.camera:", shell=True)
+
+    elif "news update" in command:
+        print("Fetching latest news...")
+        news = get_latest_news()
+        print(news)
+        say(news)
+
+
+    elif "tech news" in command or "technology news" in command:
+        say("Fetching latest technology news sir")
+        news = get_latest_news()
+        print(news)
+        say(news)
+
+
+    elif "sur quit for today " in command:
+        exit()
+
+    elif "weather update" in command:
+        say("Which city sir?")
+        city = takecommand().lower()
+
+        weather = get_weather(city)
+        print(weather)
+        say(weather)
+
+
+    else:
+        reply = chat(command)
+        say(reply)
+        print("SUR:", reply)
+
+    if "ai" in command:
+        reply = ai(command)
+        print("SUR AI:", reply)
+        say(reply)
